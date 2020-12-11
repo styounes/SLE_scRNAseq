@@ -16,9 +16,10 @@ library(monocle3)
 library(AUCell)
 library(scDblFinder)
 library(topGO)
+library(EnhancedVolcano)
 
 setwd("~/MEGA/Bioinformatics/SLE_scRNAseq/data")
-load("~/MEGA/Bioinformatics/SLE_scRNAseq/analysis/base.analysis.RData")
+# load("~/MEGA/Bioinformatics/SLE_scRNAseq/analysis/base.analysis.RData")
 
 sce <- read10xCounts("filtered_feature_bc_matrix")
 
@@ -479,7 +480,6 @@ rm(extra.info)
 set.seed(100)
 mm.pairs <- readRDS(system.file("exdata", "mouse_cycle_markers.rds", package="scran"))
 assignments <- cyclone(sce, mm.pairs, gene.names = rowData(sce)$gene_id, BPPARAM = MulticoreParam(workers = 10))
-table(assignments$phases, colLabels(sce))
 colData(sce)$phase <- assignments$phases
 
 rm(mm.pairs)
@@ -636,7 +636,3 @@ reducedDim(cds.bcell, "PCA") <- reducedDim(sce.bcell, "PCA")
 
 set.seed(42)
 cds.bcell <- reduce_dimension(cds.bcell, reduction_method = "UMAP", preprocess_method = "PCA", cores = 22, verbose = FALSE)
-
-
-
-
