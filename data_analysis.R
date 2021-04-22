@@ -19,11 +19,16 @@ library(topGO)
 library(EnhancedVolcano)
 
 setwd("~/MEGA/Bioinformatics/SLE_scRNAseq/data")
+
+# During our actual workflow, it makes little sense to re-run the analysis every time we boot RStudio
+# Consequently, this block of code loads our saved data analysis when needed and is commented out when running the analysis de novo.
 # load("~/MEGA/Bioinformatics/SLE_scRNAseq/analysis/base.analysis.RData")
 
 sce <- read10xCounts("filtered_feature_bc_matrix")
 
 # Sample and Feature Annotation -------------------------------------------
+# This block of code appropriately annotates each sample and adds the genome annotation from AnnotationHub.
+# In addition, mitochondrial genes are labeled for subsequent quality control.
 
 working_strain <- character()
 batch <- character()
@@ -89,7 +94,6 @@ names(location) <- location$gene_id
 location <- as.data.frame(location)
 is.mito <- location$seqnames == "MT"
 
-
 # Quality Control ---------------------------------------------------------
 
 qc <- perCellQCMetrics(sce, subsets = list(Mito = is.mito), BPPARAM = MulticoreParam())
@@ -103,6 +107,7 @@ discard <- qc.lib | qc.nexprs | qc.mito
 DataFrame(LibSize = sum(qc.lib), NExprs = sum(qc.nexprs), MitoProp = sum(qc.mito), Total = sum(discard))
 sce$discard <- discard
 
+# These plots allow us to visualize the data based on each metric and evaluate visually for batch effects
 gridExtra::grid.arrange(
   plotColData(sce, x = "Mouse", y = "sum", colour_by = "discard", other_fields = "Strain") +
     scale_y_log10() + ggtitle("Total Count"),
@@ -127,6 +132,8 @@ plotColData(sce, x = "sum", y = "subsets_Mito_percent", colour_by = "discard")
 plot(qc$sum, qc$subsets_MT_percent, log="x", xlab="Total count", ylab='Mitochondrial %')
 abline(h=attr(is.mito, "thresholds")["higher"], col="red")
 
+# This section of code allows us to evaluate whether we are inadvertently eliminating a cell type with our quality control
+# It does so by evaluating whether the average 
 lost <- calculateAverage(counts(sce)[,!sce$discard])
 kept <- calculateAverage(counts(sce)[,sce$discard])
 logged <- edgeR::cpm(cbind(lost, kept), log = TRUE, prior.count = 2)
@@ -135,6 +142,7 @@ abundance <- rowMeans(logged)
 plot(abundance, logFC, xlab = "Average Count", ylab = "Log-FC (lost/kept)", pch = 16)
 points(abundance[is.mito], logFC[is.mito], col = "blue", pch = 16)
 
+# Our system has limited memory; a little bit of memory management goes a long way
 rm(lost)
 rm(kept)
 rm(abundance)
@@ -152,7 +160,7 @@ sce <- sce[,!sce$discard]
 
 # Top Features and Dimensionality Reduction -------------------------------
 
-# Selecting top differential features
+# Selecting top differentially expressed features
 set.seed(42)
 clust.sce <- scran::quickCluster(sce, BPPARAM = MulticoreParam(), block.BPPARAM = MulticoreParam())
 table(clust.sce)
@@ -187,72 +195,11 @@ percent.var <- attr(reducedDim(sce), "percentVar")
 plot(percent.var, xlab = "PC", ylab = "Variance Explained (%)")
 rm(percent.var)
 
+# Finally, we remove putative doublets (i.e. two cells which were in one droplet)
 set.seed(42)
 sce <- scDblFinder(sce, samples = "Batch", nfeatures = 750, propRandom = 1, verbose = TRUE, BPPARAM = MulticoreParam())
 sce[,sce$scDblFinder.class == "doublet"]
 sce <- sce[,sce$scDblFinder.class == "singlet"]
-
-# # Clustering --------------------------------------------------------------
-# 
-# pcs <- reducedDim(sce, "PCA")
-# choices <- getClusteredPCs(pcs, BPPARAM = MulticoreParam())
-# metadata(choices)$chosen # Evaluates to 39
-# plot(choices$n.pcs, choices$n.clusters, xlab = "Number of PCs", ylab = "Number of clusters")
-# abline(a = 1, b = 1, col = "red")
-# abline(v = metadata(choices)$chosen, col = "blue", lty = 2)
-# reducedDim(sce, "PCA_Reduced") <- reducedDim(sce, "PCA")[,1:metadata(choices)$chosen]
-# # reducedDim(sce, "PCA_Reduced") <- reducedDim(sce, "PCA")[,1:39]
-# 
-# g <- buildSNNGraph(sce, use.dimred = "PCA_Reduced", BPPARAM = MulticoreParam(), subset.row = hvg)
-# clust <- igraph::cluster_walktrap(g)$membership
-# table(clust)
-# colLabels(sce) <- factor(clust)
-# plotReducedDim(sce, "TSNE", colour_by = "label")
-# 
-# set.seed(42)
-# reducedDim(sce, "Force") <- igraph::layout_with_fr(g)
-# plotReducedDim(sce, colour_by = "label", dimred = "Force")
-# 
-# ratio <- clusterModularity(g, clust, as.ratio=TRUE)
-# dim(ratio)
-# 
-# pheatmap::pheatmap(log2(ratio + 1), cluster_rows = FALSE, cluster_cols = FALSE,
-#          color = colorRampPalette(c("white", "blue"))(100))
-# 
-# cluster.gr <- igraph::graph_from_adjacency_matrix(log2(ratio + 1), mode = "upper", weighted = TRUE, diag = FALSE)
-# 
-# set.seed(42)
-# plot(cluster.gr, edge.width = igraph::E(cluster.gr)$weight * 5,
-#      layout = igraph::layout_with_lgl)
-# 
-# ClusterFUN <- function(x) {
-#   graph <- buildSNNGraph(x, use.dimred = "PCA_Reduced", BPPARAM = MulticoreParam(), subset.row = hvg)
-#   igraph::cluster_walktrap(graph)$membership
-# }
-# 
-# originals <- ClusterFUN(sce)
-# 
-# set.seed(42)
-# coassign <- bluster::bootstrapStability(sce, FUN = ClusterFUN, clusters = originals)
-# pheatmap(coassign, cluster_row = FALSE, cluster_col = FALSE, color = rev(viridis::plasma(100)))
-# 
-# markers.wmw <- findMarkers(sce, test = "wilcox", direction = "up", lfc = 1, pval.type = "some", BPPARAM = MulticoreParam())
-# 
-# setwd("~/MEGA/Bioinformatics/SLE_scRNAseq/analysis/")
-# for(i in 1:length(markers.wmw)){
-#   x <- markers.wmw[[i]]
-#   x <- subset(x, x$p.value < 0.05)
-#   names <- rownames(x)
-#   rownames(x) <- NULL
-#   x <- cbind(names, x)
-#   write.table(x, file = paste("Cluster ", as.character(i), ": Wilcoxon-Mann-Whitney Determined Markers, pval.type = some.tsv"),
-#               quote = FALSE, row.names = FALSE, sep = "\t")
-# }
-# rm(x)
-# rm(names)
-# rm(i)
-# rm(markers.wmw)
-# setwd("~/MEGA/Bioinformatics/SLE_scRNAseq/data/")
 
 # Cell Type Annotation ----------------------------------------------------
 colnames(sce) <- paste("V", as.character(1:ncol(counts(sce))), sep = "")
@@ -333,51 +280,6 @@ rm(cells)
 rm(assignments)
 rm(cm.list)
 
-# # Hemopedia Reference
-# hemopedia.reference <- read.csv("hemopedia_reference.csv")
-# reference.lineages <- list()
-# for(i in unique(hemopedia.reference$Lineage)){
-#   reference.lineages[[i]] <- unique(hemopedia.reference[hemopedia.reference$Lineage == i, "GeneSymbol"])
-# }
-# cell.rankings <- AUCell_buildRankings(counts(sce), plotStats = TRUE)
-# cell.AUC <- AUCell_calcAUC(reference.lineages, cell.rankings, verbose = TRUE, aucMaxRank = 750)
-# cell.assignments <- AUCell_exploreThresholds(cell.AUC, plotHist = TRUE, assignCells = TRUE)
-# assignments <- matrix(nrow = length(colnames(sce)), ncol = 1) 
-# rownames(assignments) <- colnames(sce)
-# for(i in names(cell.assignments)){
-#   cells <- cell.assignments[[i]]$assignment
-#   assignments[cells,] <- i
-# }
-# assignments <- replace_na(assignments, "Unassigned")
-# sce$hemopedia.type <- as.character(assignments)
-# plotReducedDim(sce, "UMAP", colour_by = "hemopedia.type")
-# 
-# rm(hemopedia.reference)
-# 
-# # ImmGen Reference
-# immgen.ref <- celldex::ImmGenData()
-# predicted <- SingleR(test = sce, ref = immgen.ref, labels = immgen.ref$label.main, BPPARAM = MulticoreParam())
-# plotScoreHeatmap(predicted)
-# plotScoreDistribution(predicted)
-# assignment.table <- table(Assigned = predicted$pruned.labels, Cluster = colLabels(sce))
-# pheatmap(log2(assignment.table + 10), color = colorRampPalette(c("white", "blue"))(101))
-# 
-# predicted.fine <- SingleR(test = sce, ref = immgen.ref, labels = immgen.ref$label.fine)
-# plotScoreHeatmap(predicted.fine)
-# plotScoreDistribution(predicted.fine)
-# assignment.table <- table(Assigned = predicted.fine$pruned.labels, Cluster = colLabels(sce))
-# pheatmap(log2(assignment.table + 10), color = colorRampPalette(c("white", "blue"))(101))
-# 
-# colData(sce) <- cbind(colData(sce), immgen.coarse = predicted$pruned.labels)
-# colData(sce) <- cbind(colData(sce), immgen.fine = predicted.fine$pruned.labels)
-# 
-# rm(immgen.ref)
-# rm(predicted)
-# rm(predicted.fine)
-# 
-# plotReducedDim(sce, "UMAP", colour_by = "immgen.coarse")
-# plotReducedDim(sce, "UMAP", colour_by = "immgen.fine")
-
 # Differential Analysis ---------------------------------------------------
 
 # Differential Expression
@@ -398,7 +300,7 @@ setwd("~/MEGA/Bioinformatics/SLE_scRNAseq/analysis/nzbwf1_de/")
 for(cell.type in names(de.results)){
     x <- as.data.frame(de.results[[cell.type]])
     x <- x[order(x$FDR),]
-    # x <- subset(x, x$FDR < 0.05)
+    x <- subset(x, x$FDR < 0.05)
     x <- cbind(gene = rownames(x), x)
     write.table(x, file = paste(as.character(cell.type), " - NZBWF1 Differential Gene Expression.tsv"), quote = FALSE, sep = "\t", row.names = FALSE)
   }
@@ -412,15 +314,15 @@ for(cell.type in names(de.results)){
   tiff(filename = paste(cell.type, " - Volcano Plot.tiff"), width = 850, height = 1000)
   print(graph)
   dev.off()
-  # ggplot(x) + geom_point(aes(x = logFC, y= -log10(PValue), color = threshold), size = 3) + 
-  #   ggtitle(cell.type) + xlab("Log Fold Change") + ylab("-log10 PValue") +
-  #   scale_color_manual(values = c("#A9A9A9", "#009051")) +
-  #   geom_vline(xintercept = 0.5, col = "black", linetype = "dotted", size = 1) +
-  #   geom_vline(xintercept = -0.5, col = "black", linetype = "dotted", size = 1) +
-  #   geom_hline(yintercept = 4, col = "black", linetype = "dotted", size = 1) +
-  #   theme(plot.title = element_text(size = 28, face = "bold", hjust = 0.5), axis.title = element_text(size = 18, face = "bold"),
-  #         axis.text = element_text(size = 15), legend.position = "none") +
-  #   geom_label_repel(aes(x = logFC, y = -log10(PValue), label = threshold))
+  ggplot(x) + geom_point(aes(x = logFC, y= -log10(PValue), color = threshold), size = 3) +
+    ggtitle(cell.type) + xlab("Log Fold Change") + ylab("-log10 PValue") +
+    scale_color_manual(values = c("#A9A9A9", "#009051")) +
+    geom_vline(xintercept = 0.5, col = "black", linetype = "dotted", size = 1) +
+    geom_vline(xintercept = -0.5, col = "black", linetype = "dotted", size = 1) +
+    geom_hline(yintercept = 4, col = "black", linetype = "dotted", size = 1) +
+    theme(plot.title = element_text(size = 28, face = "bold", hjust = 0.5), axis.title = element_text(size = 18, face = "bold"),
+          axis.text = element_text(size = 15), legend.position = "none") +
+    geom_label_repel(aes(x = logFC, y = -log10(PValue), label = threshold))
 }
 setwd("~/MEGA/Bioinformatics/SLE_scRNAseq/data")
 
