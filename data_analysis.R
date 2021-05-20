@@ -538,3 +538,47 @@ reducedDim(cds.bcell, "PCA") <- reducedDim(sce.bcell, "PCA")
 
 set.seed(42)
 cds.bcell <- reduce_dimension(cds.bcell, reduction_method = "UMAP", preprocess_method = "PCA", cores = 22, verbose = FALSE)
+  
+# Session Info Output:
+# R version 4.0.3 (2020-10-10)
+# Platform: x86_64-apple-darwin17.0 (64-bit)
+# Running under: macOS Catalina 10.15.7
+# 
+# Matrix products: default
+# BLAS:   /System/Library/Frameworks/Accelerate.framework/Versions/A/Frameworks/vecLib.framework/Versions/A/libBLAS.dylib
+# LAPACK: /Library/Frameworks/R.framework/Versions/4.0/Resources/lib/libRlapack.dylib
+# 
+# locale:
+#   [1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8
+# 
+# attached base packages:
+#   [1] stats4    parallel  stats     graphics  grDevices utils     datasets  methods   base     
+# 
+# other attached packages:
+#   [1] AUCell_1.10.0               monocle3_0.2.3.0            SingleCellExperiment_1.10.1 SummarizedExperiment_1.18.2
+# [5] DelayedArray_0.14.1         matrixStats_0.58.0          GenomicRanges_1.40.0        GenomeInfoDb_1.24.2        
+# [9] IRanges_2.22.2              S4Vectors_0.26.1            Biobase_2.48.0              BiocGenerics_0.34.0        
+# 
+# loaded via a namespace (and not attached):
+#   [1] bitops_1.0-6              bit64_4.0.5               RColorBrewer_1.1-2        tools_4.0.3              
+# [5] utf8_1.2.1                R6_2.5.0                  irlba_2.3.3               vipor_0.4.5              
+# [9] DBI_1.1.1                 colorspace_2.0-0          tidyselect_1.1.0          gridExtra_2.3            
+# [13] bit_4.0.4                 compiler_4.0.3            graph_1.66.0              BiocNeighbors_1.6.0      
+# [17] scales_1.1.1              stringr_1.4.0             digest_0.6.27             R.utils_2.10.1           
+# [21] XVector_0.28.0            scater_1.16.2             pkgconfig_2.0.3           htmltools_0.5.1.1        
+# [25] fastmap_1.1.0             limma_3.44.3              rlang_0.4.10              RSQLite_2.2.5            
+# [29] shiny_1.6.0               DelayedMatrixStats_1.10.1 generics_0.1.0            BiocParallel_1.22.0      
+# [33] R.oo_1.24.0               dplyr_1.0.5               RCurl_1.98-1.3            magrittr_2.0.1           
+# [37] BiocSingular_1.4.0        GenomeInfoDbData_1.2.3    Matrix_1.3-2              Rcpp_1.0.6               
+# [41] ggbeeswarm_0.6.0          munsell_0.5.0             fansi_0.4.2               viridis_0.5.1            
+# [45] R.methodsS3_1.8.1         lifecycle_1.0.0           stringi_1.5.3             edgeR_3.30.3             
+# [49] zlibbioc_1.34.0           plyr_1.8.6                grid_4.0.3                blob_1.2.1               
+# [53] promises_1.2.0.1          ggrepel_0.9.1             dqrng_0.2.1               crayon_1.4.1             
+# [57] lattice_0.20-41           annotate_1.66.0           locfit_1.5-9.4            pillar_1.5.1             
+# [61] igraph_1.2.6              reshape2_1.4.4            XML_3.99-0.6              glue_1.4.2               
+# [65] scran_1.16.0              data.table_1.14.0         vctrs_0.3.7               EnhancedVolcano_1.6.0    
+# [69] httpuv_1.5.5              gtable_0.3.0              purrr_0.3.4               assertthat_0.2.1         
+# [73] cachem_1.0.4              ggplot2_3.3.3             mime_0.10                 rsvd_1.0.3               
+# [77] xtable_1.8-4              later_1.1.0.1             viridisLite_0.3.0         tibble_3.1.0             
+# [81] pheatmap_1.0.12           AnnotationDbi_1.50.3      beeswarm_0.3.1            memoise_2.0.0            
+# [85] statmod_1.4.35            ellipsis_0.3.1            GSEABase_1.50.1    
